@@ -31,3 +31,14 @@ generations of 256 tokens.
 
 The kernels per adapted layer (`lora_parity` timing): 1 token 10.2 us, 4 tokens 12.3 us, 8 tokens 16.4 us,
 300 tokens 47.1 us.
+
+## Retest on v0.1.40.4 (`6674a00` + the PR's 5 commits)
+
+Same machine, scripts and settings (`*-0404*.out`). `lora_parity` all ok, with identical kernel timings;
+`cvec_parity` passes; the end-to-end checks are identical.
+
+| | decode, MTP | decode, no MTP | prompt read, per 1K tokens |
+| --- | --- | --- | --- |
+| no adapter | 213.2 tok/s | 118.5 tok/s | 215 ms |
+| adapter loaded, `lora=0` | 210.1 tok/s (-1.5%) | 115.0 tok/s (-3.0%) | 215 ms (±0%) |
+| adapter loaded, `lora=1` | 202.2 tok/s (-5.2%) | 110.1 tok/s (-7.1%) | 227 ms (+6%) |
