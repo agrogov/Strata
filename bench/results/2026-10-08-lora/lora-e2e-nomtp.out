@@ -1,0 +1,10 @@
+  lora=1 p0: 'The capital of France is Paris.'  []
+  lora=0 p0: 'The capital of France is Paris.'  []
+  lora=1 p0: 'The capital of France is Paris.'  []
+  lora=1 p1: 'def is_prime(n):\n    if n <= 1:\n        return False\n    if n <= 3:\n        return True\n    if n % 2 == 0:\n   '  []
+  lora=0 p1: 'Here is a short Python function to check if a number is prime, followed by an explanation.\n\n### Python Functio'  []
+  lora=1 p1: 'def is_prime(n):\n    if n <= 1:\n        return False\n    if n <= 3:\n        return True\n    if n % 2 == 0:\n   '  []
+  (none) p0: 'The capital of France is Paris.'  []
+  (none) p1: 'Here is a short Python function to check if a number is prime, followed by an explanation.\n\n### Python Functio'  []
+p0: on==on again True | off==no-adapter True | on!=off False
+p1: on==on again True | off==no-adapter True | on!=off True

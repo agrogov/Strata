@@ -1434,6 +1434,46 @@ the document, +0.4% on the chat. Details: `bench/results/2026-09-27-esp/`.
 
 ---
 
+## LoRA adapters (off by default)
+
+The engine applies a llama.cpp LoRA adapter GGUF (`general.type = adapter`, `adapter.type = lora`, e.g. from
+`convert_lora_to_gguf.py`) to the mixer's output projections: `blk.N.ssm_out.weight` on GDN layers and
+`blk.N.attn_output.weight` on QSA layers. For each adapted layer: `y += s B (A x)`, with `s = scale * alpha / rank`
+(alpha 0: `s = scale`), the same as llama.cpp's `llm_build_lora_mm`. If the file holds a tensor for any other
+weight, loading fails, because running only part of an adapter gives neither model.
+
+```
+--lora FILE                       scale 1.0
+--lora-scaled FILE:SCALE[,...]    several files: their ranks are stacked (summed rank per layer <= 512)
+```
+
+A, B and the products are fp32, kept on every device that runs an adapted layer (1.7 MiB per layer at rank 50 on
+Qwen3.8-Flash-Next's geometry: 80 MiB for all 48 layers).
+The engine log says `LoRA: 1 file, 48 layers adapted, ...`, and INFO reports `lora=<adapted layers>`. The MTP
+draft layer is never adapted; it only drafts, and the verified tokens are the adapted model's.
+
+**Per request.** A loaded adapter is on for every request unless the request turns it off: the API takes
+`"lora": false` in the request body (OpenAI and Anthropic). A config default goes in `"sampling": {"lora": false}`;
+the engine line key is `lora=0|1`. The switch is a device flag the kernels read, so the captured graphs are shared
+by both states. Switching drops the conversation cache once. Turned off, the output is bit-identical to the engine
+without an adapter. While batch slots are decoding, a request that asks for the other state is refused.
+
+**Cost.** Per adapted layer and window: two small kernels, about 10 us for one token and 16 us for an 8-token verify
+window; a 300-token prompt chunk takes 47 us (rank 50, 6144 -> 2560, one B200; `lora_parity` prints these). Turned off,
+the kernels still launch and return at once. Measured on one B200 with a rank-50 adapter on all 48 layers (IQ2_XS,
+256 generated tokens, prompts of about 2,700 tokens, 3 runs each):
+
+| | decode, MTP (`--spec 4`) | decode, no MTP | prompt read, per 1K tokens |
+| --- | --- | --- | --- |
+| no adapter | 213.2 tok/s | 118.5 tok/s | 214 ms |
+| adapter loaded, `lora=0` | 210.1 tok/s (-1.5%) | 115.6 tok/s (-2.4%) | 216 ms (+1%) |
+| adapter loaded, `lora=1` | 202.2 tok/s (-5.2%) | 111.7 tok/s (-5.7%) | 226 ms (+6%) |
+
+MTP draft acceptance depends on the text the adapted model writes, so the decode figure with MTP varies more than
+the others. Details and scripts: `bench/results/2026-10-08-lora/`.
+
+---
+
 ## Troubleshooting
 
 | Symptom | What to do |
