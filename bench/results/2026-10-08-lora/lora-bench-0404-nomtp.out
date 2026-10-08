@@ -1,0 +1,4 @@
+no mtp: setting | prompt read ms (tokens) | decode tok/s
+   lora=1  |   597.7 (2644) |  110.1
+   lora=0  |   604.3 (2792) |  115.0
+  none     |   579.7 (2703) |  118.5
