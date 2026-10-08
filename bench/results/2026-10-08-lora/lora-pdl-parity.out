@@ -1,0 +1,29 @@
+  covers(): adapted layers only                                      ok
+  starts on                                                          ok
+1-2. y += B (A x) against double precision
+    1 tokens, fp32 x: rel err 3.54e-07 (< 1e-4)                      ok
+    1 tokens, fp16 x: rel err 3.04e-07 (< 1e-4)                      ok
+    3 tokens, fp32 x: rel err 3.88e-07 (< 1e-4)                      ok
+    3 tokens, fp16 x: rel err 4.24e-07 (< 1e-4)                      ok
+    8 tokens, fp32 x: rel err 4.39e-07 (< 1e-4)                      ok
+    8 tokens, fp16 x: rel err 5.73e-07 (< 1e-4)                      ok
+  300 tokens, fp32 x: rel err 7.44e-07 (< 1e-4)                      ok
+  300 tokens, fp16 x: rel err 7.91e-07 (< 1e-4)                      ok
+  row padding untouched                                              ok
+3. the request switch
+  lora_set_enabled(false)                                            ok
+  off,   1 tokens: y bitwise unchanged                               ok
+  off,   8 tokens: y bitwise unchanged                               ok
+  off, 300 tokens: y bitwise unchanged                               ok
+  off, the graph captured on: y bitwise unchanged                    ok
+  on again, the same graph: the adapter                              ok
+  timing: 1 tokens, 6.2 us per call (rank 50, 6144 -> 2560)
+  timing: 4 tokens, 10.2 us per call (rank 50, 6144 -> 2560)
+  timing: 8 tokens, 13.3 us per call (rank 50, 6144 -> 2560)
+  timing: 300 tokens, 47.1 us per call (rank 50, 6144 -> 2560)
+  timing: 1 tokens, a graph of 48 layers: 227.4 us per replay (4.74 us per layer)
+  timing: 8 tokens, a graph of 48 layers: 551.0 us per replay (11.48 us per layer)
+4. edges
+  a layer without an adapter: untouched                              ok
+  captured call above kLoraCaptureTokens throws                      ok
+lora_parity: all ok

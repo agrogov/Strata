@@ -1458,16 +1458,18 @@ the engine line key is `lora=0|1`. The switch is a device flag the kernels read,
 by both states. Switching drops the conversation cache once. Turned off, the output is bit-identical to the engine
 without an adapter. While batch slots are decoding, a request that asks for the other state is refused.
 
-**Cost.** Per adapted layer and window: two small kernels, about 10 us for one token and 16 us for an 8-token verify
-window; a 300-token prompt chunk takes 47 us (rank 50, 6144 -> 2560, one B200; `lora_parity` prints these). Turned off,
-the kernels still launch and return at once. Measured on one B200 with a rank-50 adapter on all 48 layers (IQ2_XS,
-256 generated tokens, prompts of about 2,700 tokens, 3 runs each):
+**Cost.** Per adapted layer and window: two small kernels, the second started while the first runs (programmatic
+dependent launch); inside the decode graph about 4.7 us for one token and 11.5 us for an 8-token verify window, and a
+300-token prompt chunk takes 47 us (rank 50, 6144 -> 2560, one B200; `lora_parity` prints these). Turned off, the
+kernels still launch and return at once. Measured on one B200 with a rank-50 adapter on all 48 layers (engine
+0.1.40.4, IQ2_XS, 256 generated tokens, prompts of about 2,700 tokens, 3 runs each; without MTP the mean of 3
+such benchmarks):
 
 | | decode, MTP (`--spec 4`) | decode, no MTP | prompt read, per 1K tokens |
 | --- | --- | --- | --- |
-| no adapter | 213.2 tok/s | 118.5 tok/s | 214 ms |
-| adapter loaded, `lora=0` | 210.1 tok/s (-1.5%) | 115.6 tok/s (-2.4%) | 216 ms (+1%) |
-| adapter loaded, `lora=1` | 202.2 tok/s (-5.2%) | 111.7 tok/s (-5.7%) | 226 ms (+6%) |
+| no adapter | 213.2 tok/s | 118.2 tok/s | 216 ms |
+| adapter loaded, `lora=0` | 210.4 tok/s (-1.3%) | 114.9 tok/s (-2.8%) | 209 ms (within the spread) |
+| adapter loaded, `lora=1` | 206.1 tok/s (-3.3%) | 111.7 tok/s (-5.5%) | 227 ms (+5%) |
 
 MTP draft acceptance depends on the text the adapted model writes, so the decode figure with MTP varies more than
 the others. Details and scripts: `bench/results/2026-10-08-lora/`.

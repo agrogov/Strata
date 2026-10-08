@@ -1,0 +1,22 @@
+== nomtp
+p0: on==on again True | off==no-adapter True | on!=off False
+p1: on==on again True | off==no-adapter True | on!=off True
+no mtp: setting | prompt read ms (tokens) | decode tok/s
+   lora=1  |   600.3 (2644) |  111.4
+   lora=0  |   590.0 (2792) |  114.7
+  none     |   580.3 (2703) |  117.6
+== mtp
+p0: on==on again True | off==no-adapter True | on!=off False
+p1: on==on again True | off==no-adapter True | on!=off True
+mtp: setting | prompt read ms (tokens) | decode tok/s
+   lora=1  |   604.7 (2644) |  206.1
+   lora=0  |   582.7 (2792) |  210.4
+  none     |   582.7 (2703) |  213.2
+FINISHED
+   lora=1  |   597.7 (2644) |  111.4
+   lora=0  |   579.7 (2792) |  114.8
+  none     |   585.3 (2703) |  118.6
+   lora=1  |   598.3 (2644) |  112.3
+   lora=0  |   579.7 (2792) |  115.2
+  none     |   585.0 (2703) |  118.5
+FINISHED
