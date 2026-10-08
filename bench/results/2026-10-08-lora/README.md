@@ -42,3 +42,31 @@ Same machine, scripts and settings (`*-0404*.out`). `lora_parity` all ok, with i
 | no adapter | 213.2 tok/s | 118.5 tok/s | 215 ms |
 | adapter loaded, `lora=0` | 210.1 tok/s (-1.5%) | 115.0 tok/s (-3.0%) | 215 ms (±0%) |
 | adapter loaded, `lora=1` | 202.2 tok/s (-5.2%) | 110.1 tok/s (-7.1%) | 227 ms (+6%) |
+
+## The overlapped up kernel (v0.1.40.4, `perf(lora)` commit)
+
+The small path's second kernel (y += B h) is a programmatic dependent launch: it starts while h = A x runs, loads
+its column of B, then waits for h. `lora_parity` (`lora-pdl-parity.out`) all ok and now also times 48 adapted
+layers captured in one graph, the way decode runs them:
+
+| per adapted layer | before | overlapped |
+| --- | --- | --- |
+| 1 token, one call | 10.2 us | 6.2 us |
+| 8 tokens, one call | 16.4 us | 13.3 us |
+| 1 token, in a 48-layer graph | 6.06 us | 4.74 us |
+| 8 tokens, in a 48-layer graph | 13.05 us | 11.48 us |
+| 300 tokens (tiled path, unchanged) | 47.1 us | 47.1 us |
+
+A single kernel (the B h blocks spinning on a counter until the A x blocks are done) was tried too: 7.17 us per
+layer in the graph, slower, dropped.
+
+End to end (`lora-pdl-bench.out`): the checks above identical in both modes. MTP one benchmark, no MTP the mean of 3:
+
+| | decode, MTP | decode, no MTP | prompt read, per 1K tokens |
+| --- | --- | --- | --- |
+| no adapter | 213.2 tok/s | 118.2 tok/s | 216 ms |
+| adapter loaded, `lora=0` | 210.4 tok/s (-1.3%) | 114.9 tok/s (-2.8%) | 209 ms |
+| adapter loaded, `lora=1` | 206.1 tok/s (-3.3%) | 111.7 tok/s (-5.5%) | 227 ms (+5%) |
+
+Each setting reads its own prompt texts, so prompt read per 1K tokens moves by a few percent between settings
+without any change in the prompt path.
