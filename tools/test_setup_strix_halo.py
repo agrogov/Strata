@@ -91,12 +91,12 @@ class ExactArch(unittest.TestCase):
 
     def test_matches_the_engines_header(self):
         """include/strata/kernels/gfx_arch.hpp is the reference: gfx1151 has the WMMA kernels and the gfx1151 defaults;
-        gfx1103 and gfx1152 are outside its list."""
+        gfx1103 (Radeon 780M/760M, 0.1.44) shares the gfx11 WMMA kernels; gfx1152 is outside the list."""
         hpp = (ROOT / "include/strata/kernels/gfx_arch.hpp").read_text(encoding="utf-8")
         wmma = re.search(r"gfx_arch_is_gfx11_wmma.*?\n}", hpp, re.S).group(0)
         listed = set(re.findall(r'"(gfx\d+)"', wmma))
         self.assertIn("gfx1151", listed)
-        self.assertNotIn("gfx1103", listed)
+        self.assertIn("gfx1103", listed)          # 0.1.44: the 780M runs the gfx11 WMMA kernels (decode x1.53)
         self.assertNotIn("gfx1152", listed)
         self.assertIn('gfx_arch_is(gcn, "gfx1151")', hpp)
         self.assertEqual(setup.STRIX_HALO_ARCH, "gfx1151")
@@ -471,6 +471,47 @@ class LowRamUsesTheCarveOutOnly(unittest.TestCase):
         # a 32 GB-RAM Strix Halo: the smallest model is not "made to fit" by counting the GPU's shared memory as extra
         self.assertFalse(setup.low_ram_fits("IQ1_M", 24.0, setup.low_ram_vram(halo)))
         self.assertTrue(setup.low_ram_fits("IQ1_M", 24.0, 40.0))                            # a 40 GB dedicated card does
+
+
+class IgpuTextIsArchExact(unittest.TestCase):
+    """The owner's rule: setup never takes one AMD iGPU for another.  gfx1103 (Radeon 780M / 760M) gets its own text,
+    never the Strix Halo (gfx1151) lines; gfx1151 keeps its."""
+
+    def gpu(self, arch, name):
+        return {"arch": arch, "name": name, "uma": True, "dedicated_gb": 2.0, "shared_gb": 30.0, "vram_gb": 32.0}
+
+    def test_gfx1103_never_gets_strix_halo_text(self):
+        for win in (False, True):
+            with mock.patch.object(setup, "WIN", win):
+                text = chr(10).join(setup.igpu_notes(self.gpu("gfx1103", "AMD Radeon 780M Graphics"), 61.0))
+            self.assertIn("gfx1103", text)
+            self.assertIn("STRATA_EXPERIMENTAL_GFX1103=1", text)
+            for bad in ("gfx1151", "Ryzen AI Max", "STRIX_HALO", "Recommended model"):
+                self.assertNotIn(bad, text)
+            self.assertNotIn("Strix Halo (gfx1151", text)
+            self.assertNotIn("compiled here for gfx1151", text)
+
+    def test_gfx1151_keeps_strix_halo_text(self):
+        with mock.patch.object(setup, "WIN", False):
+            text = chr(10).join(setup.igpu_notes(self.gpu("gfx1151", "AMD Radeon 8060S"), 121.0))
+        self.assertIn("Strix Halo (gfx1151, Ryzen AI Max)", text)
+        self.assertIn("compiled here for gfx1151", text)
+        self.assertIn("docs/STRIX_HALO.md", text)
+        self.assertNotIn("gfx1103", text)
+
+    def test_other_chips_get_nothing(self):
+        for a in ("gfx1150", "gfx1152", "gfx1100", "gfx1201"):
+            self.assertEqual(setup.igpu_notes(self.gpu(a, "x"), 64.0), [])
+
+    def test_no_strix_halo_model_recommendation_for_gfx1103(self):
+        g = self.gpu("gfx1103", "AMD Radeon 780M Graphics")
+        self.assertFalse(setup.strix_halo_recommends(g, 128.0))
+        self.assertTrue(setup.strix_halo_recommends(self.gpu("gfx1151", "x"), 128.0))
+
+    def test_setup_prints_notes_through_the_exact_helper(self):
+        src = Path(setup.__file__).read_text(encoding="utf-8")
+        self.assertIn("igpu_notes(gpu, ram_gb())", src)
+        self.assertNotIn("strix_halo_notes(gpu, ram_gb())", src)
 
 
 if __name__ == "__main__":
