@@ -12414,9 +12414,9 @@ int main(int argc, char** argv) {
             // of a slot's checkpoint this request moved into `checks` (from the slot it is admitted to), -1: none
             int lent_slot = -1;
             int64_t moved_in = -1;
-            if (slot_ckpt_move_env() && o.prompt_cache > 0 && want_cvec == cvec_cached && live_ok)
+            if (slot_ckpt_move_env() && o.prompt_cache > 0 && want_cvec == cvec_cached && want_lora == lora_cached && live_ok)
                 for (int b = 0; b < (int) bs.size(); ++b) {
-                    if (bs[(size_t) b].cvec != cvec_cached || bs[(size_t) b].tainted) continue;   // (#879)
+                    if (bs[(size_t) b].cvec != cvec_cached || bs[(size_t) b].lora != lora_cached || bs[(size_t) b].tainted) continue;   // (#879)
                     for (const ConvCheckpoint& c : bs[(size_t) b].checks) {
                         const int64_t L = (int64_t) c.ids.size();
                         if (L > resume && L <= (int64_t) live.size() && starts_with(c.ids, c.imgs) &&
@@ -12665,6 +12665,7 @@ int main(int argc, char** argv) {
                 for (const ConvCheckpoint& c : checks)
                     if ((int64_t) c.ids.size() == parked.tokens) { live = c.ids; live_imgs = c.imgs; }
                 cvec_cached = donor->cvec;
+                lora_cached = donor->lora;
                 resume = parked.tokens;
                 from_live = false;
                 conversations.count_borrow();
